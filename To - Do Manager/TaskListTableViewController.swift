@@ -35,7 +35,10 @@ class TaskListTableViewController: UITableViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        //Loding tasks
         loadTasks()
+        //Editing activation button
+        navigationItem.leftBarButtonItem = editButtonItem
         
     }
     // Func sorts tasks
@@ -203,5 +206,45 @@ class TaskListTableViewController: UITableViewController {
         }
         return UISwipeActionsConfiguration(actions: [actionSwipeInstance])
     }
-
+    
+    // Deleting tasks
+    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        
+        // Delete task
+        let taskType = sectionsTypesPosition[indexPath.section]
+        tasks[taskType]?.remove(at: indexPath.row)
+        
+        // Delete row of task
+        tableView.deleteRows(at: [indexPath], with: .automatic)
+    }
+    
+    override func tableView(_ tableView: UITableView, canMoveRowAt indexPath: IndexPath) -> Bool {
+        return true
+    }
+    
+    // Tasks sorting by hand
+    override func tableView(_ tableView: UITableView, moveRowAt sourceIndexPath: IndexPath, to destinationIndexPath: IndexPath) {
+        // Moving from section
+        let taskTypeFrom = sectionsTypesPosition[sourceIndexPath.section]
+        // Moving to section
+        let taskTypeTo = sectionsTypesPosition[destinationIndexPath.section]
+        
+        guard let movedTask = tasks[taskTypeFrom]?[sourceIndexPath.row] else {
+            return
+        }
+        
+        // Delete the task from the place from whitch it was moved
+        tasks[taskTypeFrom]!.remove(at: sourceIndexPath.row)
+        
+        // Insert the task to new place
+        tasks[taskTypeTo]!.insert(movedTask, at: destinationIndexPath.row)
+        
+        // If section has changed, change the task type according to new position
+        if taskTypeFrom != taskTypeTo {
+            tasks[taskTypeTo]![destinationIndexPath.row].type = taskTypeTo
+        }
+        tableView.reloadData()
+        
+    }
+    
 }
