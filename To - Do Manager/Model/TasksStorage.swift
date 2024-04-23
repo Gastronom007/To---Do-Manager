@@ -15,22 +15,42 @@ protocol TasksStorageProtocol {
 
 class TasksStorage: TasksStorageProtocol {
     
+    private var storage = UserDefaults.standard
+    
+    var storageKey: String = "tasks"
+    
+    private enum TaskKey: String {
+        case title
+        case type
+        case status
+    }
+    
     func loadTasks() -> [TaskProtocol] {
-        let testTasks: [TaskProtocol] = [
-            Task(title: "Sell may old MacBook", type: .normal, status: .planned),
-            Task(title: "Learn new framework", type: .important, status: .planned),
-            Task(title: "Pay the bills", type: .important, status: .copmleted),
-            Task(title: "Buy a new vacuum", type: .normal, status: .copmleted),
-            Task(title: "Rewrite my CV", type: .important, status: .planned),
-            Task(title: "Change job", type: .important, status: .planned),
-            Task(title: "Make important changes in my life like: cahnge job, buy a house, star a family,  be happy and successful", type: .important, status: .planned)
-        ]
-        return testTasks
+        var resultTasks: [TaskProtocol] = []
+        let tasksFromStorage = storage.array(forKey: storageKey) as? [[String:String]] ?? []
+        
+        for task in tasksFromStorage {
+            guard let title = task[TaskKey.title.rawValue],
+                  let typeRaw = task[TaskKey.type.rawValue],
+                  let statusRaw = task[TaskKey.status.rawValue] else {
+                continue
+            }
+            let type: TaskPriority = typeRaw == "important" ? .important : .normal
+            let status: TaskStatus = statusRaw == "planned" ? .planned : .copmleted
+            resultTasks.append(Task(title: title, type: type, status: status))
+        }
+        return resultTasks
     }
     
     func saveTasks(_ tasks: [TaskProtocol]) {
-        
+        var arrayForStorage: [[String:String]] = []
+        tasks.forEach { task in
+            var newElementForStorage: Dictionary<String, String> = [:]
+            newElementForStorage[TaskKey.title.rawValue] = task.title
+            newElementForStorage[TaskKey.type.rawValue] = (task.type == .important) ? "important" : "normal"
+            newElementForStorage[TaskKey.status.rawValue] = (task.status == .planned) ? "planned" : "completed"
+            arrayForStorage.append(newElementForStorage)
+        }
+        storage.set(arrayForStorage, forKey: storageKey)
     }
-    
-    
 }

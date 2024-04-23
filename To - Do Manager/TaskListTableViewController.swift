@@ -22,6 +22,11 @@ class TaskListTableViewController: UITableViewController {
                     return task1position < task2position
                 }
             }
+            var savingArray: [TaskProtocol] = []
+            tasks.forEach { _, value in
+                savingArray += value
+            }
+            tasksStorage.saveTasks(savingArray)
         }
     }
     
@@ -32,25 +37,13 @@ class TaskListTableViewController: UITableViewController {
     var taskStatusPosition: [TaskStatus] = [.planned, .copmleted]
     
     
-    
     override func viewDidLoad() {
         super.viewDidLoad()
-        //Loding tasks
-        loadTasks()
-        //Editing activation button
+
         navigationItem.leftBarButtonItem = editButtonItem
         
     }
-    // Func sorts tasks
-    private func loadTasks() {
-        sectionsTypesPosition.forEach { taskType in
-            tasks[taskType] = []
-        }
-        tasksStorage.loadTasks().forEach { task in
-            tasks[task.type]?.append(task)
-        }
-    }
-    
+
     
     
     // MARK: - Table view data source
@@ -190,12 +183,7 @@ class TaskListTableViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
         
         let taskType = sectionsTypesPosition[indexPath.section]
-        guard let _ = tasks[taskType]? [indexPath.row] else {
-            return nil
-        }
-        
-        // Check if task is completed
-        guard tasks[taskType]![indexPath.row].status == .copmleted else {
+        guard let _ = tasks[taskType]?[indexPath.row] else {
             return nil
         }
         
@@ -204,7 +192,41 @@ class TaskListTableViewController: UITableViewController {
             self.tasks[taskType]![indexPath.row].status = .planned
             self.tableView.reloadSections(IndexSet(arrayLiteral: indexPath.section), with: .automatic)
         }
-        return UISwipeActionsConfiguration(actions: [actionSwipeInstance])
+        
+        // Action to go to edit screen
+        let actionEditInstance = UIContextualAction(style: .normal, title: "Edit") { _, _, _ in
+            
+            // Loading scene from storyboard
+            let editScreen = UIStoryboard(name: "Main", bundle: nil).instantiateViewController(withIdentifier: "TaskEditController") as! TaskEditController
+            
+            // Transfer values of editing task
+            editScreen.taskText = self.tasks[taskType]![indexPath.row].title
+            editScreen.taskType = self.tasks[taskType]![indexPath.row].type
+            editScreen.taskStatus = self.tasks[taskType]![indexPath.row].status
+            
+            // Call handler
+            editScreen.doAfterEdit = { title, type, status in
+                let editedTask = Task(title: title, type: type, status: status)
+                self.tasks[taskType]![indexPath.row] = editedTask
+                tableView.reloadData()
+                
+            }
+            // Transition to edit screen
+            self.navigationController?.pushViewController(editScreen, animated: true)
+            
+        }
+        // Chaneg background color of action button
+        actionEditInstance.backgroundColor = .darkGray
+        
+        // Create an object describing available actions
+        let actionsConfiguration: UISwipeActionsConfiguration
+        if tasks[taskType]![indexPath.row].status == .copmleted {
+            actionsConfiguration = UISwipeActionsConfiguration(actions: [actionSwipeInstance, actionEditInstance])
+        } else {
+            actionsConfiguration = UISwipeActionsConfiguration(actions: [actionEditInstance])
+        }
+        return actionsConfiguration
+        
     }
     
     // Deleting tasks
@@ -247,4 +269,24 @@ class TaskListTableViewController: UITableViewController {
         
     }
     
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "toCreateScreen" {
+            let destination = segue.destination as! TaskEditController
+            
+            destination.doAfterEdit = { [unowned self] title, type, status in
+                let newTask = Task(title: title, type: type, status: status)
+                tasks[type]?.append(newTask)
+                tableView.reloadData()
+            }
+        }
+    }
+    
+    func setTasks(_ tasksCollection: [TaskProtocol]) {
+        sectionsTypesPosition.forEach { taskType in
+            tasks[taskType] = []
+        }
+        tasksCollection.forEach { task in
+            tasks[task.type]?.append(task)
+        }
+    }
 }

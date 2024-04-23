@@ -9,6 +9,7 @@ import UIKit
 
 class TaskEditController: UITableViewController {
     
+    @IBOutlet weak var saveButton: UIBarButtonItem!
     @IBOutlet weak var taskTitle: UITextField!
     @IBOutlet weak var taskTypeLabel: UILabel!
     @IBOutlet weak var taskStatusSwitch: UISwitch!
@@ -37,17 +38,37 @@ class TaskEditController: UITableViewController {
         if taskStatus == .copmleted {
             taskStatusSwitch.isOn = true
         }
+ 
+    }
+    
+    @IBAction func saveTask(_ sender: UIBarButtonItem) {
+        
+        // Getrting current values
+        let title = taskTitle?.text ?? ""
+        let type  = taskType
+        let status: TaskStatus = taskStatusSwitch.isOn ? .copmleted : .planned
+        
+        if title.trimmingCharacters(in: .whitespaces).count == 0 {
+            
+            AlertHelper.showAlert( in: self, title: "Hm...", message: "Please write your task")
+            
+        } else {
+            
+            // Call handler
+            doAfterEdit?(title, type, status)
+            
+            // Transition to previous screen
+            navigationController?.popViewController(animated: true)
+        }
     }
     
     // MARK: - Table view data source
     
     override func numberOfSections(in tableView: UITableView) -> Int {
-        // #warning Incomplete implementation, return the number of sections
         return 1
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        // #warning Incomplete implementation, return the number of rows
         return 3
     }
     
@@ -59,7 +80,8 @@ class TaskEditController: UITableViewController {
             
             destination.doAfterTypeSlected = { [ unowned self ] selectedType in
                 taskType = selectedType
-                taskTypeLabel.text = taskTitles[taskType]
+                // Updating label with current type
+                taskTypeLabel?.text = taskTitles[taskType]
             }
         }
     }
