@@ -7,10 +7,11 @@
 
 import UIKit
 
+
 class TaskListTableViewController: UITableViewController {
     
     // Tasks Storage
-    var tasksStorage: TasksStorageProtocol = TasksStorage() // contains func load and save tasks
+    var tasksStorage: TasksStorageProtocol = TasksStorage()
     
     // Tasks Collection
     var tasks: [TaskPriority: [TaskProtocol]] = [:] {
@@ -35,15 +36,14 @@ class TaskListTableViewController: UITableViewController {
     
     // Order of presenting tasks about their status
     var taskStatusPosition: [TaskStatus] = [.planned, .copmleted]
-    
+
     
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        tableView.register(UINib(nibName: "CustomHeader", bundle: nil), forHeaderFooterViewReuseIdentifier: "CustomHeader")
         navigationItem.leftBarButtonItem = editButtonItem
-        
     }
-
+    
     
     
     // MARK: - Table view data source
@@ -57,50 +57,17 @@ class TaskListTableViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         
         //Determine priority of task current section
-       let taskType = sectionsTypesPosition[section]
+        let taskType = sectionsTypesPosition[section]
         guard let currentTasksType = tasks[taskType] else {
             return 0
+            
         }
-        
         return currentTasksType.count
     }
-
-   
-    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        return getConfiguredTaskCell_stack(for: indexPath)
-    }
     
-    // The cell based on constraints
-    private func getConfiguredTaskCell_constraints(for indexPath: IndexPath) -> UITableViewCell {
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
-        //Loadind cell's prototype with ID "taskCellConstraints"
-        let cell = tableView.dequeueReusableCell(withIdentifier: "taskCellConstraints", for: indexPath)
-        
-        // Getting task value, that wiil be presented in the cell
-        let taskType = sectionsTypesPosition[indexPath.section]
-        guard let currentTask = tasks[taskType]?[indexPath.row] else {
-            return cell
-        }
-        
-        // Text mark of the cymbol
-        let symbolLabel = cell.viewWithTag(1) as? UILabel
-        let textLabel = cell.viewWithTag(2) as? UILabel
-        
-        // Changing symbol in cell
-        symbolLabel?.text = getSymbolForTask(with: currentTask.status)
-        // Changing text in cell
-        textLabel?.text = currentTask.title
-        
-        // Changing text and symbol color
-        if currentTask.status == .planned {
-            textLabel?.textColor = .black
-            symbolLabel?.textColor = .black
-        } else {
-            textLabel?.textColor = .lightGray
-            symbolLabel?.textColor = .lightGray
-        }
-
-        return cell
+        return getConfiguredTaskCell_stack(for: indexPath)
     }
     
     // Return symbol for certain task's type
@@ -118,26 +85,34 @@ class TaskListTableViewController: UITableViewController {
     }
     
     
-    override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+    override func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
         
-        var title: String?
+        let headerView = tableView.dequeueReusableHeaderFooterView(withIdentifier: "CustomHeader") as! CustomHeader
+        let taskType = sectionsTypesPosition[section]
         
-        let tasksType = sectionsTypesPosition[section]
-        if tasksType == .important {
-            title = "Important"
-        } else if tasksType == .normal {
-            title = "Normal"
+        headerView.headerLabel.text = taskType.rawValue.uppercased()
+        
+        if tasks[taskType]?.count == 0 {
+            headerView.emptyListLabel?.isHidden = false
+            
+        } else {
+            headerView.emptyListLabel?.isHidden = true
         }
-        return title
+
+        return headerView
     }
+    
+    
     
     private func getConfiguredTaskCell_stack(for indexPath: IndexPath) -> UITableViewCell {
         
         //Loadind cell's prototype with ID "taskCellStack"
         let cell = tableView.dequeueReusableCell(withIdentifier: "taskCellStack") as! TaskCell
         
+        
         // Getting task value that will be presented in cell
         let taskType = sectionsTypesPosition[indexPath.section]
+        
         guard let currentTask = tasks[taskType]?[indexPath.row] else {
             return cell
         }
@@ -149,15 +124,15 @@ class TaskListTableViewController: UITableViewController {
         
         // Changing text color
         if currentTask.status == .planned {
-            cell.title.textColor = .black
-            cell.symbol.textColor = .black
+            cell.title.textColor = .none
+            cell.symbol.textColor = .none
         } else {
             cell.title.textColor = .lightGray
             cell.symbol.textColor = .lightGray
         }
-        
         return cell
     }
+    
     
     // Changing tasks status as complited
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
@@ -238,6 +213,8 @@ class TaskListTableViewController: UITableViewController {
         
         // Delete row of task
         tableView.deleteRows(at: [indexPath], with: .automatic)
+        
+        tableView.reloadData()
     }
     
     override func tableView(_ tableView: UITableView, canMoveRowAt indexPath: IndexPath) -> Bool {
@@ -286,6 +263,21 @@ class TaskListTableViewController: UITableViewController {
             tasks[taskType] = []
         }
         tasksCollection.forEach { task in
+            tasks[task.type]?.append(task)
+        }
+        tableView.reloadData()
+    }
+    
+    override func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 40
+    }
+    
+    private func loadTasks() {
+        sectionsTypesPosition.forEach { taskType in
+            tasks[taskType] = []
+        }
+        
+        tasksStorage.loadTasks().forEach { task in
             tasks[task.type]?.append(task)
         }
     }

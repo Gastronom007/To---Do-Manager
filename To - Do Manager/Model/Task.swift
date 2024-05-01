@@ -8,7 +8,7 @@
 import Foundation
 
 
-enum TaskPriority {
+enum TaskPriority: String {
     
     case normal
     case important
